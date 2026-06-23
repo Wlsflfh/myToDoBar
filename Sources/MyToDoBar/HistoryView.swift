@@ -334,31 +334,39 @@ private struct MonthCalendarView: View {
     var body: some View {
         VStack(spacing: 16) {
             HStack {
+                Text(displayedMonth.formatted(.dateTime.year().month(.wide)))
+                    .font(.largeTitle.bold())
+
+                Spacer()
+
                 Button {
                     moveMonth(by: -1)
                 } label: {
                     Image(systemName: "chevron.left")
                 }
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.circle)
+                .controlSize(.large)
                 .accessibilityLabel("이전 달")
-
-                Text(displayedMonth.formatted(.dateTime.year().month(.wide)))
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-
-                Button {
-                    moveMonth(by: 1)
-                } label: {
-                    Image(systemName: "chevron.right")
-                }
-                .accessibilityLabel("다음 달")
 
                 Button("오늘") {
                     let today = Date()
                     displayedMonth = today
                     selectedDate = today
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.blue)
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
+
+                Button {
+                    moveMonth(by: 1)
+                } label: {
+                    Image(systemName: "chevron.right")
+                }
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.circle)
+                .controlSize(.large)
+                .accessibilityLabel("다음 달")
             }
 
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 8) {
