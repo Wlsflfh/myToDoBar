@@ -319,10 +319,16 @@ private struct MonthCalendarView: View {
         TodoCalendar(calendar: calendar).daysInMonth(containing: displayedMonth)
     }
 
-    private var weekdaySymbols: [String] {
+    private var weekdayHeaders: [WeekdayHeader] {
         let symbols = calendar.veryShortStandaloneWeekdaySymbols
-        let offset = max(0, calendar.firstWeekday - 1)
-        return Array(symbols[offset...] + symbols[..<offset])
+        return (0..<7).map { offset in
+            let weekday = ((calendar.firstWeekday - 1 + offset) % 7) + 1
+            return WeekdayHeader(weekday: weekday, symbol: symbols[weekday - 1])
+        }
+    }
+
+    private var holidays: KoreanHolidayCalendar {
+        KoreanHolidayCalendar(calendar: calendar)
     }
 
     var body: some View {
@@ -356,10 +362,10 @@ private struct MonthCalendarView: View {
             }
 
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 8) {
-                ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
-                    Text(symbol)
+                ForEach(weekdayHeaders) { header in
+                    Text(header.symbol)
                         .font(.caption.bold())
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(color(forWeekday: header.weekday, default: .secondary))
                         .frame(maxWidth: .infinity)
                 }
 
@@ -384,15 +390,13 @@ private struct MonthCalendarView: View {
             VStack(spacing: 3) {
                 Text("\(calendar.component(.day, from: day.date))")
                     .fontWeight(isSelected ? .semibold : .regular)
+                    .foregroundStyle(dayNumberColor(for: day, isSelected: isSelected))
                 Text(count == 0 ? " " : "\(count)")
                     .font(.caption2)
                     .foregroundStyle(isSelected ? .white.opacity(0.9) : .secondary)
             }
             .frame(maxWidth: .infinity, minHeight: 38)
             .background(isSelected ? Color.accentColor : Color.clear, in: RoundedRectangle(cornerRadius: 8))
-            .foregroundStyle(
-                isSelected ? Color.white : (day.isInDisplayedMonth ? Color.primary : Color.secondary.opacity(0.5))
-            )
         }
         .buttonStyle(.plain)
         .accessibilityLabel(day.date.formatted(date: .long, time: .omitted))
@@ -403,4 +407,29 @@ private struct MonthCalendarView: View {
         guard let nextMonth = calendar.date(byAdding: .month, value: value, to: displayedMonth) else { return }
         displayedMonth = nextMonth
     }
+
+    private func dayNumberColor(for day: TodoCalendarDay, isSelected: Bool) -> Color {
+        if isSelected { return .white }
+
+        let weekday = calendar.component(.weekday, from: day.date)
+        let baseColor = holidays.isHoliday(day.date)
+            ? Color.red
+            : color(forWeekday: weekday, default: .primary)
+        return day.isInDisplayedMonth ? baseColor : baseColor.opacity(0.35)
+    }
+
+    private func color(forWeekday weekday: Int, default defaultColor: Color) -> Color {
+        switch weekday {
+        case 1: .red
+        case 7: .blue
+        default: defaultColor
+        }
+    }
+}
+
+private struct WeekdayHeader: Identifiable {
+    let weekday: Int
+    let symbol: String
+
+    var id: Int { weekday }
 }
