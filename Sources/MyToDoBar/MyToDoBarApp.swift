@@ -7,6 +7,7 @@ import MyToDoBarKit
 struct MyToDoBarApp: App {
     @StateObject private var store = TodoStore()
     @StateObject private var dailyLogStore = DailyLogStore()
+    @StateObject private var githubSettings = GitHubSettingsStore()
 
     init() {
         guard CommandLine.arguments.contains("--verify-launch-at-login") else { return }
@@ -20,12 +21,16 @@ struct MyToDoBarApp: App {
         .menuBarExtraStyle(.window)
 
         Window("전체 보기", id: "history") {
-            HistoryView(store: store, dailyLogStore: dailyLogStore)
+            HistoryView(
+                store: store,
+                dailyLogStore: dailyLogStore,
+                githubSettings: githubSettings
+            )
         }
         .defaultSize(width: 840, height: 620)
 
         Settings {
-            SettingsView()
+            SettingsView(githubSettings: githubSettings)
         }
     }
 

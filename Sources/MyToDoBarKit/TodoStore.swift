@@ -124,6 +124,15 @@ public final class TodoStore: ObservableObject {
         return persist(updatedItems)
     }
 
+    @discardableResult
+    public func delete(_ item: TodoItem) -> Bool {
+        guard storageState == .available, items.contains(where: { $0.id == item.id }) else {
+            return false
+        }
+
+        return persist(items.filter { $0.id != item.id })
+    }
+
     public func refreshCurrentDate(force: Bool = false) {
         let refreshedDate = now()
         guard force || !calendar.isDate(refreshedDate, inSameDayAs: currentDate) else { return }

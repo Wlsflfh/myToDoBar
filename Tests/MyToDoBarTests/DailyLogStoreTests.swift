@@ -4,39 +4,70 @@ import XCTest
 
 final class DailyLogStoreTests: XCTestCase {
     @MainActor
-    func testPersistsDiaryAndWorkoutForSameDate() throws {
+    func testPersistsMultipleNamedNotesForSameDate() throws {
         let fixture = try DailyLogFixture()
         let store = fixture.makeStore()
 
-        XCTAssertTrue(store.setDiary("좋은 하루", on: fixture.firstDay))
-        XCTAssertTrue(store.setWorkout("달리기 30분", on: fixture.firstDay))
+        let first = try XCTUnwrap(store.addNote(on: fixture.firstDay))
+        let second = try XCTUnwrap(store.addNote(on: fixture.firstDay))
+        XCTAssertTrue(store.setTitle("회의", for: first.id))
+        XCTAssertTrue(store.setText("결정 사항", for: first.id))
+        XCTAssertTrue(store.setPublishPath("contents/swift", for: first.id))
+        XCTAssertTrue(store.setTitle("아이디어", for: second.id))
+        XCTAssertTrue(store.setRemote(
+            path: "contents/회의.md",
+            sha: "abc123",
+            repository: "Wlsflfh/TIL",
+            branch: "main",
+            for: first.id
+        ))
 
-        let restored = fixture.makeStore()
-        XCTAssertEqual(restored.diary(on: fixture.firstDay), "좋은 하루")
-        XCTAssertEqual(restored.workout(on: fixture.firstDay), "달리기 30분")
+        let restored = fixture.makeStore().notes(on: fixture.firstDay)
+        XCTAssertEqual(restored.count, 2)
+        XCTAssertEqual(restored.first { $0.id == first.id }?.title, "회의")
+        XCTAssertEqual(restored.first { $0.id == first.id }?.text, "결정 사항")
+        XCTAssertEqual(restored.first { $0.id == first.id }?.publishPath, "contents/swift")
+        XCTAssertEqual(restored.first { $0.id == first.id }?.remotePath, "contents/회의.md")
+        XCTAssertEqual(restored.first { $0.id == first.id }?.remoteSHA, "abc123")
+        XCTAssertEqual(restored.first { $0.id == first.id }?.remoteRepository, "Wlsflfh/TIL")
+        XCTAssertEqual(restored.first { $0.id == first.id }?.remoteBranch, "main")
+        XCTAssertEqual(restored.first { $0.id == second.id }?.title, "아이디어")
     }
 
     @MainActor
-    func testKeepsRecordsSeparatedByDate() throws {
+    func testKeepsNotesSeparatedByDate() throws {
         let fixture = try DailyLogFixture()
         let store = fixture.makeStore()
 
-        XCTAssertTrue(store.setDiary("첫째 날", on: fixture.firstDay))
-        XCTAssertTrue(store.setDiary("둘째 날", on: fixture.secondDay))
+        XCTAssertNotNil(store.addNote(on: fixture.firstDay))
+        XCTAssertNotNil(store.addNote(on: fixture.secondDay))
 
-        XCTAssertEqual(store.diary(on: fixture.firstDay), "첫째 날")
-        XCTAssertEqual(store.diary(on: fixture.secondDay), "둘째 날")
+        XCTAssertEqual(store.notes(on: fixture.firstDay).count, 1)
+        XCTAssertEqual(store.notes(on: fixture.secondDay).count, 1)
     }
 
     @MainActor
-    func testRemovesEmptyRecord() throws {
+    func testDeletesOneNoteWithoutRemovingOthers() throws {
         let fixture = try DailyLogFixture()
         let store = fixture.makeStore()
+        let first = try XCTUnwrap(store.addNote(on: fixture.firstDay))
+        let second = try XCTUnwrap(store.addNote(on: fixture.firstDay))
 
-        XCTAssertTrue(store.setWorkout("스쿼트", on: fixture.firstDay))
-        XCTAssertTrue(store.setWorkout("", on: fixture.firstDay))
+        XCTAssertTrue(store.deleteNote(id: first.id))
+        XCTAssertEqual(store.notes(on: fixture.firstDay).map(\.id), [second.id])
+    }
 
-        XCTAssertTrue(store.logs.isEmpty)
+    @MainActor
+    func testMigratesLegacyDiaryAndWorkoutToNamedNotes() throws {
+        let fixture = try DailyLogFixture()
+        let legacyJSON = """
+        [{"id":"00000000-0000-0000-0000-000000000001","date":0,"diary":"좋은 하루","workout":"달리기 30분"}]
+        """
+        try Data(legacyJSON.utf8).write(to: fixture.fileURL)
+
+        let notes = fixture.makeStore().notes
+        XCTAssertEqual(notes.map(\.title), ["일기", "운동 일지"])
+        XCTAssertEqual(notes.map(\.text), ["좋은 하루", "달리기 30분"])
     }
 }
 

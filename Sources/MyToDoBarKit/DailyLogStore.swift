@@ -1,33 +1,54 @@
 import Combine
 import Foundation
 
-public struct DailyLog: Codable, Equatable, Identifiable, Sendable {
+public struct DailyNote: Codable, Equatable, Identifiable, Sendable {
     public let id: UUID
     public let date: Date
-    public var diary: String
-    public var workout: String
+    public var title: String
+    public var text: String
+    public var remotePath: String?
+    public var remoteSHA: String?
+    public var remoteRepository: String?
+    public var remoteBranch: String?
+    public var publishPath: String?
 
     public init(
         id: UUID = UUID(),
         date: Date,
-        diary: String = "",
-        workout: String = ""
+        title: String = "새 메모",
+        text: String = "",
+        remotePath: String? = nil,
+        remoteSHA: String? = nil,
+        remoteRepository: String? = nil,
+        remoteBranch: String? = nil,
+        publishPath: String? = nil
     ) {
         self.id = id
         self.date = date
-        self.diary = diary
-        self.workout = workout
+        self.title = title
+        self.text = text
+        self.remotePath = remotePath
+        self.remoteSHA = remoteSHA
+        self.remoteRepository = remoteRepository
+        self.remoteBranch = remoteBranch
+        self.publishPath = publishPath
     }
 }
 
 protocol DailyLogPersisting {
-    func load() throws -> [DailyLog]
-    func save(_ logs: [DailyLog]) throws
+    func load() throws -> [DailyNote]
+    func save(_ notes: [DailyNote]) throws
 }
 
 struct JSONDailyLogPersistence: DailyLogPersisting {
     let fileURL: URL
     var fileManager: FileManager = .default
+
+    private struct LegacyDailyLog: Decodable {
+        let date: Date
+        let diary: String
+        let workout: String
+    }
 
     static func live(fileManager: FileManager = .default) -> JSONDailyLogPersistence {
         let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -35,20 +56,36 @@ struct JSONDailyLogPersistence: DailyLogPersisting {
         return JSONDailyLogPersistence(fileURL: directory.appending(path: "daily-logs.json"), fileManager: fileManager)
     }
 
-    func load() throws -> [DailyLog] {
+    func load() throws -> [DailyNote] {
         guard fileManager.fileExists(atPath: fileURL.path) else { return [] }
-        return try JSONDecoder().decode([DailyLog].self, from: Data(contentsOf: fileURL))
+        let data = try Data(contentsOf: fileURL)
+
+        if let notes = try? JSONDecoder().decode([DailyNote].self, from: data) {
+            return notes
+        }
+
+        let legacyLogs = try JSONDecoder().decode([LegacyDailyLog].self, from: data)
+        return legacyLogs.flatMap { log in
+            var notes: [DailyNote] = []
+            if !log.diary.isEmpty {
+                notes.append(DailyNote(date: log.date, title: "일기", text: log.diary))
+            }
+            if !log.workout.isEmpty {
+                notes.append(DailyNote(date: log.date, title: "운동 일지", text: log.workout))
+            }
+            return notes
+        }
     }
 
-    func save(_ logs: [DailyLog]) throws {
+    func save(_ notes: [DailyNote]) throws {
         try fileManager.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try JSONEncoder().encode(logs).write(to: fileURL, options: .atomic)
+        try JSONEncoder().encode(notes).write(to: fileURL, options: .atomic)
     }
 }
 
 @MainActor
 public final class DailyLogStore: ObservableObject {
-    @Published public private(set) var logs: [DailyLog] = []
+    @Published public private(set) var notes: [DailyNote] = []
     @Published public private(set) var errorMessage: String?
 
     private let persistence: any DailyLogPersisting
@@ -64,59 +101,77 @@ public final class DailyLogStore: ObservableObject {
         load()
     }
 
-    public func diary(on date: Date) -> String {
-        log(on: date)?.diary ?? ""
-    }
-
-    public func workout(on date: Date) -> String {
-        log(on: date)?.workout ?? ""
+    public func notes(on date: Date) -> [DailyNote] {
+        notes.filter { calendar.isDate($0.date, inSameDayAs: date) }
     }
 
     @discardableResult
-    public func setDiary(_ text: String, on date: Date) -> Bool {
-        update(on: date) { $0.diary = text }
+    public func addNote(on date: Date) -> DailyNote? {
+        let note = DailyNote(date: calendar.startOfDay(for: date))
+        return save(notes + [note]) ? note : nil
     }
 
     @discardableResult
-    public func setWorkout(_ text: String, on date: Date) -> Bool {
-        update(on: date) { $0.workout = text }
+    public func setTitle(_ title: String, for id: UUID) -> Bool {
+        update(id: id) { $0.title = title }
     }
 
-    private func log(on date: Date) -> DailyLog? {
-        logs.first { calendar.isDate($0.date, inSameDayAs: date) }
+    @discardableResult
+    public func setText(_ text: String, for id: UUID) -> Bool {
+        update(id: id) { $0.text = text }
     }
 
-    private func update(on date: Date, change: (inout DailyLog) -> Void) -> Bool {
-        var updated = logs
-        if let index = updated.firstIndex(where: { calendar.isDate($0.date, inSameDayAs: date) }) {
-            change(&updated[index])
-            if updated[index].diary.isEmpty, updated[index].workout.isEmpty {
-                updated.remove(at: index)
-            }
-        } else {
-            var newLog = DailyLog(date: calendar.startOfDay(for: date))
-            change(&newLog)
-            guard !newLog.diary.isEmpty || !newLog.workout.isEmpty else { return true }
-            updated.append(newLog)
+    @discardableResult
+    public func setPublishPath(_ path: String, for id: UUID) -> Bool {
+        update(id: id) { $0.publishPath = path }
+    }
+
+    @discardableResult
+    public func setRemote(
+        path: String,
+        sha: String,
+        repository: String,
+        branch: String,
+        for id: UUID
+    ) -> Bool {
+        update(id: id) {
+            $0.remotePath = path
+            $0.remoteSHA = sha
+            $0.remoteRepository = repository
+            $0.remoteBranch = branch
         }
+    }
 
+    @discardableResult
+    public func deleteNote(id: UUID) -> Bool {
+        save(notes.filter { $0.id != id })
+    }
+
+    private func update(id: UUID, change: (inout DailyNote) -> Void) -> Bool {
+        var updated = notes
+        guard let index = updated.firstIndex(where: { $0.id == id }) else { return false }
+        change(&updated[index])
+        return save(updated)
+    }
+
+    private func save(_ updated: [DailyNote]) -> Bool {
         do {
             try persistence.save(updated)
-            logs = updated
+            notes = updated
             errorMessage = nil
             return true
         } catch {
-            errorMessage = "기록을 저장하지 못했습니다."
+            errorMessage = "메모를 저장하지 못했습니다."
             return false
         }
     }
 
     private func load() {
         do {
-            logs = try persistence.load()
+            notes = try persistence.load()
             errorMessage = nil
         } catch {
-            errorMessage = "저장된 일기와 운동 기록을 읽지 못했습니다."
+            errorMessage = "저장된 메모를 읽지 못했습니다."
         }
     }
 }

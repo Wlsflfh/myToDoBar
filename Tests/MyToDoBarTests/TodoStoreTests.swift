@@ -35,6 +35,19 @@ final class TodoStoreTests: XCTestCase {
     }
 
     @MainActor
+    func testDeletesAndPersistsItem() throws {
+        let fixture = try Fixture()
+        let store = fixture.makeStore()
+        XCTAssertTrue(store.add(title: "삭제할 일"))
+        XCTAssertTrue(store.add(title: "남길 일"))
+
+        XCTAssertTrue(store.delete(try XCTUnwrap(store.items.first)))
+
+        XCTAssertEqual(store.items.map(\.title), ["남길 일"])
+        XCTAssertEqual(fixture.makeStore().items.map(\.title), ["남길 일"])
+    }
+
+    @MainActor
     func testRefreshesTodayWithoutRollingItemsForward() throws {
         let fixture = try Fixture()
         let store = fixture.makeStore()

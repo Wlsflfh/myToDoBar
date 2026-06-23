@@ -62,16 +62,13 @@ struct MenuBarView: View {
                 )
                 .frame(minHeight: 120)
             } else {
-                ScrollView {
-                    LazyVStack(spacing: 8) {
-                        ForEach(store.todayItems) { item in
-                            TodoRow(item: item) {
-                                store.toggle(item)
-                            }
+                VStack(alignment: .leading, spacing: 3) {
+                    ForEach(store.todayItems) { item in
+                        TodoRow(item: item) {
+                            store.toggle(item)
                         }
                     }
                 }
-                .frame(maxHeight: 260)
             }
 
             Divider()
