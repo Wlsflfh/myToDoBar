@@ -133,8 +133,6 @@ private struct ScheduleFormView: View {
     let onDismiss: () -> Void
     @State private var title: String
     @State private var deadline: Date
-    @State private var dateText: String
-    @State private var timeText: String
     @State private var errorMessage: String?
 
     init(
@@ -150,14 +148,6 @@ private struct ScheduleFormView: View {
         let initialDeadline = schedule?.deadline ?? Date().addingTimeInterval(3_600)
         _title = State(initialValue: schedule?.title ?? "")
         _deadline = State(initialValue: initialDeadline)
-        _dateText = State(initialValue: ScheduleCalendar().koreanDateLabel(
-            for: initialDeadline,
-            calendar: calendar
-        ))
-        _timeText = State(initialValue: ScheduleCalendar().koreanTimeLabel(
-            for: initialDeadline,
-            calendar: calendar
-        ))
     }
 
     var body: some View {
@@ -172,12 +162,9 @@ private struct ScheduleFormView: View {
                 Text("날짜")
                     .frame(width: 38, alignment: .leading)
 
-                SteppingValueField(
-                    value: $dateText,
-                    onCommit: validateDateText,
-                    onIncrement: { adjustDate(by: 1) },
-                    onDecrement: { adjustDate(by: -1) }
-                )
+                DatePicker("날짜", selection: $deadline, displayedComponents: .date)
+                    .labelsHidden()
+                    .frame(width: 170, alignment: .leading)
 
                 Spacer()
             }
@@ -186,12 +173,9 @@ private struct ScheduleFormView: View {
                 Text("시간")
                     .frame(width: 38, alignment: .leading)
 
-                SteppingValueField(
-                    value: $timeText,
-                    onCommit: validateTimeText,
-                    onIncrement: { adjustMinute(by: 1) },
-                    onDecrement: { adjustMinute(by: -1) }
-                )
+                DatePicker("시간", selection: $deadline, displayedComponents: .hourAndMinute)
+                    .labelsHidden()
+                    .frame(width: 170, alignment: .leading)
 
                 Spacer()
 
@@ -226,67 +210,15 @@ private struct ScheduleFormView: View {
             }
         }
         .padding()
-        .frame(width: 400)
+        .frame(width: 360)
     }
 
     private func setEndOfDay() {
         guard let endOfDay = ScheduleCalendar().endOfDay(for: deadline, calendar: calendar) else { return }
         deadline = endOfDay
-        syncInputLabels()
-    }
-
-    private func adjustDate(by value: Int) {
-        guard let adjusted = calendar.date(byAdding: .day, value: value, to: deadline) else { return }
-        deadline = adjusted
-        syncInputLabels()
-    }
-
-    private func adjustMinute(by value: Int) {
-        guard let adjusted = calendar.date(byAdding: .minute, value: value, to: deadline) else { return }
-        deadline = adjusted
-        syncInputLabels()
-    }
-
-    private func validateDateText() {
-        guard let adjusted = ScheduleCalendar().applying(
-            koreanDateLabel: dateText,
-            to: deadline,
-            calendar: calendar
-        ) else {
-            errorMessage = "날짜를 '2026년 7월 5일' 형식으로 입력해 주세요."
-            return
-        }
-        deadline = adjusted
-        dateText = ScheduleCalendar().koreanDateLabel(for: adjusted, calendar: calendar)
-        errorMessage = nil
-    }
-
-    private func validateTimeText() {
-        guard let adjusted = ScheduleCalendar().applying(
-            koreanTimeLabel: timeText,
-            to: deadline,
-            calendar: calendar
-        ) else {
-            errorMessage = "시간을 '오후 11:59' 형식으로 입력해 주세요."
-            return
-        }
-        deadline = adjusted
-        timeText = ScheduleCalendar().koreanTimeLabel(for: adjusted, calendar: calendar)
-        errorMessage = nil
-    }
-
-    private func syncInputLabels() {
-        dateText = ScheduleCalendar().koreanDateLabel(for: deadline, calendar: calendar)
-        timeText = ScheduleCalendar().koreanTimeLabel(for: deadline, calendar: calendar)
-        errorMessage = nil
     }
 
     private func saveSchedule() {
-        validateDateText()
-        guard errorMessage == nil else { return }
-        validateTimeText()
-        guard errorMessage == nil else { return }
-
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             errorMessage = "일정 이름을 입력해 주세요."
@@ -318,40 +250,5 @@ private struct ScheduleFormView: View {
         } else {
             errorMessage = store.storageState.message ?? "일정을 삭제하지 못했습니다."
         }
-    }
-}
-
-private struct SteppingValueField: View {
-    @Binding var value: String
-    let onCommit: () -> Void
-    let onIncrement: () -> Void
-    let onDecrement: () -> Void
-    @FocusState private var isFocused: Bool
-
-    var body: some View {
-        HStack(spacing: 6) {
-            TextField("", text: $value)
-                .textFieldStyle(.plain)
-                .monospacedDigit()
-                .lineLimit(1)
-                .focused($isFocused)
-                .onSubmit(onCommit)
-                .onChange(of: isFocused) { oldValue, newValue in
-                    if oldValue, !newValue {
-                        onCommit()
-                    }
-                }
-
-            Spacer(minLength: 4)
-
-            Stepper("", onIncrement: onIncrement, onDecrement: onDecrement)
-                .labelsHidden()
-                .fixedSize()
-        }
-        .padding(.leading, 8)
-        .padding(.trailing, 4)
-        .frame(width: 200, height: 28)
-        .background(Color.secondary.opacity(0.12), in: RoundedRectangle(cornerRadius: 7))
-        .overlay(RoundedRectangle(cornerRadius: 7).stroke(Color.secondary.opacity(0.18)))
     }
 }
