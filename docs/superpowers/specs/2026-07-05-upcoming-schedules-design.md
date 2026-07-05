@@ -43,7 +43,7 @@ The add and edit experiences use one compact popover containing:
 - Save button
 - Delete button in edit mode
 
-The form uses a 400-point width. Its date button uses the localized `2026년 7월 5일` format, and the time control has enough fixed width to show the complete value without truncation.
+The form uses a 480-point width. Date and time both use 240-point native field-and-stepper controls so their complete values remain visible and both can be adjusted with the stepper buttons.
 
 The title is trimmed before saving. An empty title or a deadline that is not later than the current time is rejected with an inline error. A persistence error leaves the popover open and displays the store error.
 

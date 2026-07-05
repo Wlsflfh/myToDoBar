@@ -5,8 +5,7 @@ import SwiftUI
 struct UpcomingSchedulesView: View {
     @ObservedObject var store: ScheduleStore
     let calendar: Calendar
-    @State private var editingSchedule: ScheduleItem?
-    @State private var isPresentingForm = false
+    @State private var formPresentation: ScheduleFormPresentation?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -17,8 +16,7 @@ struct UpcomingSchedulesView: View {
                 Spacer()
 
                 Button {
-                    editingSchedule = nil
-                    isPresentingForm = true
+                    formPresentation = ScheduleFormPresentation(schedule: nil)
                 } label: {
                     Image(systemName: "plus")
                 }
@@ -56,21 +54,19 @@ struct UpcomingSchedulesView: View {
             }
         }
         .frame(height: 170, alignment: .top)
-        .popover(isPresented: $isPresentingForm, arrowEdge: .trailing) {
+        .popover(item: $formPresentation, arrowEdge: .trailing) { presentation in
             ScheduleFormView(
                 store: store,
                 calendar: calendar,
-                schedule: editingSchedule,
-                onDismiss: { isPresentingForm = false }
+                schedule: presentation.schedule,
+                onDismiss: { formPresentation = nil }
             )
-            .id(editingSchedule?.id)
         }
     }
 
     private func scheduleButton(_ item: ScheduleItem, relativeTo now: Date) -> some View {
         Button {
-            editingSchedule = item
-            isPresentingForm = true
+            formPresentation = ScheduleFormPresentation(schedule: item)
         } label: {
             HStack(spacing: 10) {
                 Text(shortDate(item.deadline))
@@ -124,6 +120,11 @@ struct UpcomingSchedulesView: View {
     }
 }
 
+private struct ScheduleFormPresentation: Identifiable {
+    let id = UUID()
+    let schedule: ScheduleItem?
+}
+
 private struct ScheduleFormView: View {
     @ObservedObject var store: ScheduleStore
     let calendar: Calendar
@@ -132,7 +133,6 @@ private struct ScheduleFormView: View {
     @State private var title: String
     @State private var deadline: Date
     @State private var errorMessage: String?
-    @State private var isPresentingDatePicker = false
 
     init(
         store: ScheduleStore,
@@ -160,27 +160,10 @@ private struct ScheduleFormView: View {
                 Text("날짜")
                     .frame(width: 38, alignment: .leading)
 
-                Button(formattedDate) {
-                    isPresentingDatePicker = true
-                }
-                .buttonStyle(.bordered)
-                .frame(minWidth: 160, alignment: .leading)
-                .popover(isPresented: $isPresentingDatePicker) {
-                    VStack(spacing: 12) {
-                        DatePicker("날짜", selection: $deadline, displayedComponents: .date)
-                            .datePickerStyle(.graphical)
-                            .labelsHidden()
-
-                        HStack {
-                            Spacer()
-                            Button("완료") {
-                                isPresentingDatePicker = false
-                            }
-                            .buttonStyle(.borderedProminent)
-                        }
-                    }
-                    .padding()
-                }
+                DatePicker("날짜", selection: $deadline, displayedComponents: .date)
+                    .datePickerStyle(.field)
+                    .labelsHidden()
+                    .frame(width: 240, alignment: .leading)
 
                 Spacer()
             }
@@ -190,8 +173,9 @@ private struct ScheduleFormView: View {
                     .frame(width: 38, alignment: .leading)
 
                 DatePicker("시간", selection: $deadline, displayedComponents: .hourAndMinute)
+                    .datePickerStyle(.field)
                     .labelsHidden()
-                    .frame(width: 170, alignment: .leading)
+                    .frame(width: 240, alignment: .leading)
 
                 Spacer()
 
@@ -226,12 +210,7 @@ private struct ScheduleFormView: View {
             }
         }
         .padding()
-        .frame(width: 400)
-    }
-
-    private var formattedDate: String {
-        let components = calendar.dateComponents([.year, .month, .day], from: deadline)
-        return "\(components.year ?? 0)년 \(components.month ?? 0)월 \(components.day ?? 0)일"
+        .frame(width: 480)
     }
 
     private func setEndOfDay() {
