@@ -43,7 +43,7 @@ The add and edit experiences use one compact popover containing:
 - Save button
 - Delete button in edit mode
 
-The form uses a compact 360-point width. Date and time use equal 170-point native macOS date pickers so users can select individual date or time components and adjust them with the built-in up/down controls. Display formatting follows the user's macOS locale.
+The form uses a compact 360-point width. Date and time use the same 160-by-28-point picker field. Clicking the value opens a native date or time selector, while the right-side stepper adjusts one day or one minute. The fixed labels are `yyyy년 M월 d일` and Korean 12-hour time.
 
 The title is trimmed before saving. An empty title or a deadline that is not later than the current time is rejected with an inline error. A persistence error leaves the popover open and displays the store error.
 
