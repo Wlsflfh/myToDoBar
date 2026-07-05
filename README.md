@@ -6,6 +6,7 @@
 
 - 메뉴바에서 오늘 TODO 추가, 완료 전환, 날짜별 자동 분리
 - 월간 달력과 전체·미완료·완료 필터
+- 달력 상단에서 가까운 마감 순으로 예정 일정 추가·수정·삭제
 - 날짜별로 제목과 게시 경로가 다른 메모 여러 개 작성
 - 설정한 GitHub 저장소와 브랜치에 메모를 Markdown으로 게시
 - Fine-grained PAT를 macOS Keychain에 보관
@@ -53,7 +54,13 @@ open -n -W dist/MyToDoBar.app --args --verify-launch-at-login
 cat /tmp/mytodobar-launch-at-login-diagnostic.txt
 ```
 
-TODO 데이터는 `~/Library/Application Support/MyToDoBar/todos.json`, 날짜별 메모는 같은 폴더의 `daily-logs.json`에 저장됩니다. 손상된 TODO JSON을 발견하면 원본 보호를 위해 쓰기를 중단하고 메뉴바에 오류를 표시합니다.
+TODO 데이터는 `~/Library/Application Support/MyToDoBar/todos.json`, 예정 일정은 같은 폴더의 `schedules.json`, 날짜별 메모는 `daily-logs.json`에 저장됩니다. 손상된 TODO 또는 일정 JSON을 발견하면 원본 보호를 위해 해당 데이터의 쓰기를 중단하고 오류를 표시합니다.
+
+## Upcoming Schedules
+
+전체 보기의 달력 위 `다가오는 일정`에서 제목, 날짜와 시간을 입력해 일정을 등록합니다. 일정은 가장 가까운 마감 순으로 정렬되며, 세 개를 초과하면 목록 안에서 세로로 스크롤할 수 있습니다. 카드를 누르면 제목과 마감시간을 수정하거나 일정을 삭제할 수 있습니다.
+
+마감시간이 지난 일정은 예정 목록에서 자동으로 숨겨지지만 `schedules.json`에는 보존됩니다. 현재 버전은 macOS 알림과 반복 일정을 지원하지 않습니다.
 
 ## GitHub Publishing
 

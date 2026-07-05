@@ -7,6 +7,7 @@ import MyToDoBarKit
 struct MyToDoBarApp: App {
     @StateObject private var store = TodoStore()
     @StateObject private var dailyLogStore = DailyLogStore()
+    @StateObject private var scheduleStore = ScheduleStore()
     @StateObject private var githubSettings = GitHubSettingsStore()
 
     init() {
@@ -24,6 +25,7 @@ struct MyToDoBarApp: App {
             HistoryView(
                 store: store,
                 dailyLogStore: dailyLogStore,
+                scheduleStore: scheduleStore,
                 githubSettings: githubSettings
             )
         }

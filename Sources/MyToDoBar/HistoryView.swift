@@ -13,6 +13,7 @@ private enum TodoFilter: String, CaseIterable, Identifiable {
 struct HistoryView: View {
     @ObservedObject var store: TodoStore
     @ObservedObject var dailyLogStore: DailyLogStore
+    @ObservedObject var scheduleStore: ScheduleStore
     @ObservedObject var githubSettings: GitHubSettingsStore
     @State private var selectedDate = Date()
     @State private var displayedMonth = Date()
@@ -21,12 +22,17 @@ struct HistoryView: View {
 
     var body: some View {
         NavigationSplitView {
-            MonthCalendarView(
-                displayedMonth: $displayedMonth,
-                selectedDate: $selectedDate,
-                countsByDay: store.countsByDay,
-                calendar: store.calendar
-            )
+            VStack(spacing: 20) {
+                UpcomingSchedulesView(store: scheduleStore, calendar: store.calendar)
+
+                MonthCalendarView(
+                    displayedMonth: $displayedMonth,
+                    selectedDate: $selectedDate,
+                    countsByDay: store.countsByDay,
+                    calendar: store.calendar
+                )
+            }
+            .frame(maxHeight: .infinity, alignment: .top)
             .padding()
             .navigationTitle("전체 보기")
         } detail: {
