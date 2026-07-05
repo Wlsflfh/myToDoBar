@@ -43,7 +43,7 @@ The add and edit experiences use one compact popover containing:
 - Save button
 - Delete button in edit mode
 
-The form uses a 400-point width. Date and time both use identical 200-by-28-point fields with native up/down steppers. The date text is generated directly as `yyyy년 M월 d일`; the date stepper changes one day and the time stepper changes one minute.
+The form uses a 400-point width. Date and time both use identical 200-by-28-point editable text fields with native up/down steppers. Pressing Enter or leaving a field applies typed values. The date format is `yyyy년 M월 d일`; the date stepper changes one day and the time stepper changes one minute.
 
 The title is trimmed before saving. An empty title or a deadline that is not later than the current time is rejected with an inline error. A persistence error leaves the popover open and displays the store error.
 
