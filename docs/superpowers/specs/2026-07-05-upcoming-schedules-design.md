@@ -43,7 +43,7 @@ The add and edit experiences use one compact popover containing:
 - Save button
 - Delete button in edit mode
 
-The form uses a compact 360-point width. Date and time use the same 160-by-28-point picker field. Clicking the value opens a native date or time selector, while the right-side stepper adjusts one day or one minute. The fixed labels are `yyyy년 M월 d일` and Korean 12-hour time.
+The form uses a compact 360-point width. Date and time use the same 160-by-28-point AppKit field-and-stepper control directly, without an additional popover. Time uses a fixed 24-hour locale so values display as `22:24`.
 
 The title is trimmed before saving. An empty title or a deadline that is not later than the current time is rejected with an inline error. A persistence error leaves the popover open and displays the store error.
 

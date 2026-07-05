@@ -37,18 +37,4 @@ public struct ScheduleCalendar: Sendable {
         calendar.date(bySettingHour: 23, minute: 59, second: 0, of: date)
     }
 
-    public func koreanDateLabel(for date: Date, calendar: Calendar) -> String {
-        let components = calendar.dateComponents([.year, .month, .day], from: date)
-        return "\(components.year ?? 0)년 \(components.month ?? 0)월 \(components.day ?? 0)일"
-    }
-
-    public func koreanTimeLabel(for date: Date, calendar: Calendar) -> String {
-        let formatter = DateFormatter()
-        formatter.calendar = calendar
-        formatter.locale = Locale(identifier: "ko_KR")
-        formatter.timeZone = calendar.timeZone
-        formatter.dateFormat = "a h:mm"
-        return formatter.string(from: date)
-    }
-
 }

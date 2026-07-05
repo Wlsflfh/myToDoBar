@@ -1,3 +1,4 @@
+import AppKit
 import MyToDoBarCore
 import MyToDoBarKit
 import SwiftUI
@@ -134,8 +135,6 @@ private struct ScheduleFormView: View {
     @State private var title: String
     @State private var deadline: Date
     @State private var errorMessage: String?
-    @State private var isPresentingDatePicker = false
-    @State private var isPresentingTimePicker = false
 
     init(
         store: ScheduleStore,
@@ -164,28 +163,13 @@ private struct ScheduleFormView: View {
                 Text("날짜")
                     .frame(width: 38, alignment: .leading)
 
-                SchedulePickerField(
-                    value: ScheduleCalendar().koreanDateLabel(for: deadline, calendar: calendar),
-                    onSelect: { isPresentingDatePicker = true },
-                    onIncrement: { adjustDate(by: 1) },
-                    onDecrement: { adjustDate(by: -1) }
+                NativeSteppingDatePicker(
+                    date: $deadline,
+                    calendar: calendar,
+                    locale: Locale(identifier: "ko_KR"),
+                    elements: .yearMonthDay
                 )
-                .popover(isPresented: $isPresentingDatePicker) {
-                    VStack(spacing: 12) {
-                        DatePicker("날짜", selection: $deadline, displayedComponents: .date)
-                            .datePickerStyle(.graphical)
-                            .labelsHidden()
-
-                        HStack {
-                            Spacer()
-                            Button("완료") {
-                                isPresentingDatePicker = false
-                            }
-                            .buttonStyle(.borderedProminent)
-                        }
-                    }
-                    .padding()
-                }
+                .frame(width: 160, height: 28)
 
                 Spacer()
             }
@@ -194,28 +178,13 @@ private struct ScheduleFormView: View {
                 Text("시간")
                     .frame(width: 38, alignment: .leading)
 
-                SchedulePickerField(
-                    value: ScheduleCalendar().koreanTimeLabel(for: deadline, calendar: calendar),
-                    onSelect: { isPresentingTimePicker = true },
-                    onIncrement: { adjustMinute(by: 1) },
-                    onDecrement: { adjustMinute(by: -1) }
+                NativeSteppingDatePicker(
+                    date: $deadline,
+                    calendar: calendar,
+                    locale: Locale(identifier: "en_GB"),
+                    elements: .hourMinute
                 )
-                .popover(isPresented: $isPresentingTimePicker) {
-                    VStack(spacing: 12) {
-                        DatePicker("시간", selection: $deadline, displayedComponents: .hourAndMinute)
-                            .labelsHidden()
-
-                        HStack {
-                            Spacer()
-                            Button("완료") {
-                                isPresentingTimePicker = false
-                            }
-                            .buttonStyle(.borderedProminent)
-                        }
-                    }
-                    .padding()
-                    .frame(width: 220)
-                }
+                .frame(width: 160, height: 28)
 
                 Spacer()
 
@@ -258,16 +227,6 @@ private struct ScheduleFormView: View {
         deadline = endOfDay
     }
 
-    private func adjustDate(by value: Int) {
-        guard let adjusted = calendar.date(byAdding: .day, value: value, to: deadline) else { return }
-        deadline = adjusted
-    }
-
-    private func adjustMinute(by value: Int) {
-        guard let adjusted = calendar.date(byAdding: .minute, value: value, to: deadline) else { return }
-        deadline = adjusted
-    }
-
     private func saveSchedule() {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
@@ -303,31 +262,51 @@ private struct ScheduleFormView: View {
     }
 }
 
-private struct SchedulePickerField: View {
-    let value: String
-    let onSelect: () -> Void
-    let onIncrement: () -> Void
-    let onDecrement: () -> Void
+private struct NativeSteppingDatePicker: NSViewRepresentable {
+    @Binding var date: Date
+    let calendar: Calendar
+    let locale: Locale
+    let elements: NSDatePicker.ElementFlags
 
-    var body: some View {
-        HStack(spacing: 4) {
-            Button(action: onSelect) {
-                Text(value)
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
+    func makeCoordinator() -> Coordinator {
+        Coordinator(date: $date)
+    }
 
-            Stepper("", onIncrement: onIncrement, onDecrement: onDecrement)
-                .labelsHidden()
-                .fixedSize()
+    func makeNSView(context: Context) -> NSDatePicker {
+        let picker = NSDatePicker()
+        picker.datePickerStyle = .textFieldAndStepper
+        picker.datePickerMode = .single
+        picker.datePickerElements = elements
+        picker.calendar = calendar
+        picker.locale = locale
+        picker.timeZone = calendar.timeZone
+        picker.dateValue = date
+        picker.target = context.coordinator
+        picker.action = #selector(Coordinator.dateChanged(_:))
+        return picker
+    }
+
+    func updateNSView(_ picker: NSDatePicker, context: Context) {
+        context.coordinator.date = $date
+        picker.calendar = calendar
+        picker.locale = locale
+        picker.timeZone = calendar.timeZone
+        picker.datePickerElements = elements
+        if picker.dateValue != date {
+            picker.dateValue = date
         }
-        .padding(.leading, 8)
-        .padding(.trailing, 3)
-        .frame(width: 160, height: 28)
-        .background(Color.secondary.opacity(0.12), in: RoundedRectangle(cornerRadius: 7))
-        .overlay(RoundedRectangle(cornerRadius: 7).stroke(Color.secondary.opacity(0.18)))
+    }
+
+    @MainActor
+    final class Coordinator: NSObject {
+        var date: Binding<Date>
+
+        init(date: Binding<Date>) {
+            self.date = date
+        }
+
+        @objc func dateChanged(_ picker: NSDatePicker) {
+            date.wrappedValue = picker.dateValue
+        }
     }
 }
