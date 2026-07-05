@@ -28,4 +28,26 @@ final class ScheduleCalendarTests: XCTestCase {
 
         XCTAssertEqual(upcoming.map(\.title), ["첫 번째", "두 번째"])
     }
+
+    func testEndOfDayKeepsDateAndSetsTimeTo2359() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let date = try XCTUnwrap(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 7,
+            day: 7,
+            hour: 8,
+            minute: 16
+        )))
+
+        let result = try XCTUnwrap(ScheduleCalendar().endOfDay(for: date, calendar: calendar))
+        let components = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: result)
+
+        XCTAssertEqual(components.year, 2026)
+        XCTAssertEqual(components.month, 7)
+        XCTAssertEqual(components.day, 7)
+        XCTAssertEqual(components.hour, 23)
+        XCTAssertEqual(components.minute, 59)
+        XCTAssertEqual(components.second, 0)
+    }
 }

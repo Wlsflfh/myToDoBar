@@ -39,8 +39,11 @@ The add and edit experiences use one compact popover containing:
 - Title text field
 - Date picker
 - Time picker
+- `하루 끝` shortcut that sets the selected date to 23:59
 - Save button
 - Delete button in edit mode
+
+The form uses a 400-point width. Its date button uses the localized `2026년 7월 5일` format, and the time control has enough fixed width to show the complete value without truncation.
 
 The title is trimmed before saving. An empty title or a deadline that is not later than the current time is rejected with an inline error. A persistence error leaves the popover open and displays the store error.
 

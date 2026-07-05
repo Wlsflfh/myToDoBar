@@ -59,6 +59,7 @@ struct UpcomingSchedulesView: View {
         .popover(isPresented: $isPresentingForm, arrowEdge: .trailing) {
             ScheduleFormView(
                 store: store,
+                calendar: calendar,
                 schedule: editingSchedule,
                 onDismiss: { isPresentingForm = false }
             )
@@ -125,18 +126,22 @@ struct UpcomingSchedulesView: View {
 
 private struct ScheduleFormView: View {
     @ObservedObject var store: ScheduleStore
+    let calendar: Calendar
     let schedule: ScheduleItem?
     let onDismiss: () -> Void
     @State private var title: String
     @State private var deadline: Date
     @State private var errorMessage: String?
+    @State private var isPresentingDatePicker = false
 
     init(
         store: ScheduleStore,
+        calendar: Calendar,
         schedule: ScheduleItem?,
         onDismiss: @escaping () -> Void
     ) {
         self.store = store
+        self.calendar = calendar
         self.schedule = schedule
         self.onDismiss = onDismiss
         _title = State(initialValue: schedule?.title ?? "")
@@ -151,8 +156,50 @@ private struct ScheduleFormView: View {
             TextField("일정 이름", text: $title)
                 .textFieldStyle(.roundedBorder)
 
-            DatePicker("날짜", selection: $deadline, displayedComponents: .date)
-            DatePicker("시간", selection: $deadline, displayedComponents: .hourAndMinute)
+            HStack(spacing: 12) {
+                Text("날짜")
+                    .frame(width: 38, alignment: .leading)
+
+                Button(formattedDate) {
+                    isPresentingDatePicker = true
+                }
+                .buttonStyle(.bordered)
+                .frame(minWidth: 160, alignment: .leading)
+                .popover(isPresented: $isPresentingDatePicker) {
+                    VStack(spacing: 12) {
+                        DatePicker("날짜", selection: $deadline, displayedComponents: .date)
+                            .datePickerStyle(.graphical)
+                            .labelsHidden()
+
+                        HStack {
+                            Spacer()
+                            Button("완료") {
+                                isPresentingDatePicker = false
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                    }
+                    .padding()
+                }
+
+                Spacer()
+            }
+
+            HStack(spacing: 12) {
+                Text("시간")
+                    .frame(width: 38, alignment: .leading)
+
+                DatePicker("시간", selection: $deadline, displayedComponents: .hourAndMinute)
+                    .labelsHidden()
+                    .frame(width: 170, alignment: .leading)
+
+                Spacer()
+
+                Button("하루 끝") {
+                    setEndOfDay()
+                }
+                .help("선택한 날짜의 23:59로 설정")
+            }
 
             if let errorMessage {
                 Text(errorMessage)
@@ -179,7 +226,17 @@ private struct ScheduleFormView: View {
             }
         }
         .padding()
-        .frame(width: 320)
+        .frame(width: 400)
+    }
+
+    private var formattedDate: String {
+        let components = calendar.dateComponents([.year, .month, .day], from: deadline)
+        return "\(components.year ?? 0)년 \(components.month ?? 0)월 \(components.day ?? 0)일"
+    }
+
+    private func setEndOfDay() {
+        guard let endOfDay = ScheduleCalendar().endOfDay(for: deadline, calendar: calendar) else { return }
+        deadline = endOfDay
     }
 
     private func saveSchedule() {

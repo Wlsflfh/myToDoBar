@@ -32,4 +32,8 @@ public struct ScheduleCalendar: Sendable {
                 return $0.deadline < $1.deadline
             }
     }
+
+    public func endOfDay(for date: Date, calendar: Calendar) -> Date? {
+        calendar.date(bySettingHour: 23, minute: 59, second: 0, of: date)
+    }
 }
