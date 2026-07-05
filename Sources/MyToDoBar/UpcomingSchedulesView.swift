@@ -167,7 +167,8 @@ private struct ScheduleFormView: View {
                     date: $deadline,
                     calendar: calendar,
                     locale: Locale(identifier: "ko_KR"),
-                    elements: .yearMonthDay
+                    elements: .yearMonthDay,
+                    presentsCalendarOverlay: true
                 )
                 .frame(width: 160, height: 28)
 
@@ -182,7 +183,8 @@ private struct ScheduleFormView: View {
                     date: $deadline,
                     calendar: calendar,
                     locale: Locale(identifier: "en_GB"),
-                    elements: .hourMinute
+                    elements: .hourMinute,
+                    presentsCalendarOverlay: false
                 )
                 .frame(width: 160, height: 28)
 
@@ -267,6 +269,7 @@ private struct NativeSteppingDatePicker: NSViewRepresentable {
     let calendar: Calendar
     let locale: Locale
     let elements: NSDatePicker.ElementFlags
+    let presentsCalendarOverlay: Bool
 
     func makeCoordinator() -> Coordinator {
         Coordinator(date: $date)
@@ -280,6 +283,7 @@ private struct NativeSteppingDatePicker: NSViewRepresentable {
         picker.calendar = calendar
         picker.locale = locale
         picker.timeZone = calendar.timeZone
+        picker.presentsCalendarOverlay = presentsCalendarOverlay
         picker.dateValue = date
         picker.target = context.coordinator
         picker.action = #selector(Coordinator.dateChanged(_:))
@@ -288,10 +292,6 @@ private struct NativeSteppingDatePicker: NSViewRepresentable {
 
     func updateNSView(_ picker: NSDatePicker, context: Context) {
         context.coordinator.date = $date
-        picker.calendar = calendar
-        picker.locale = locale
-        picker.timeZone = calendar.timeZone
-        picker.datePickerElements = elements
         if picker.dateValue != date {
             picker.dateValue = date
         }
