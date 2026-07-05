@@ -1,5 +1,6 @@
 import MyToDoBarCore
 import MyToDoBarKit
+import AppKit
 import SwiftUI
 
 struct UpcomingSchedulesView: View {
@@ -61,6 +62,7 @@ struct UpcomingSchedulesView: View {
                 schedule: presentation.schedule,
                 onDismiss: { formPresentation = nil }
             )
+            .id(presentation.id)
         }
     }
 
@@ -160,10 +162,13 @@ private struct ScheduleFormView: View {
                 Text("날짜")
                     .frame(width: 38, alignment: .leading)
 
-                DatePicker("날짜", selection: $deadline, displayedComponents: .date)
-                    .datePickerStyle(.field)
-                    .labelsHidden()
-                    .frame(width: 240, alignment: .leading)
+                SteppingDateField(
+                    date: $deadline,
+                    calendar: calendar,
+                    elements: .yearMonthDay,
+                    format: "yyyy년 M월 d일"
+                )
+                .frame(width: 200, height: 24, alignment: .leading)
 
                 Spacer()
             }
@@ -172,10 +177,13 @@ private struct ScheduleFormView: View {
                 Text("시간")
                     .frame(width: 38, alignment: .leading)
 
-                DatePicker("시간", selection: $deadline, displayedComponents: .hourAndMinute)
-                    .datePickerStyle(.field)
-                    .labelsHidden()
-                    .frame(width: 240, alignment: .leading)
+                SteppingDateField(
+                    date: $deadline,
+                    calendar: calendar,
+                    elements: .hourMinute,
+                    format: "a h:mm"
+                )
+                .frame(width: 200, height: 24, alignment: .leading)
 
                 Spacer()
 
@@ -210,7 +218,7 @@ private struct ScheduleFormView: View {
             }
         }
         .padding()
-        .frame(width: 480)
+        .frame(width: 400)
     }
 
     private func setEndOfDay() {
@@ -249,6 +257,58 @@ private struct ScheduleFormView: View {
             onDismiss()
         } else {
             errorMessage = store.storageState.message ?? "일정을 삭제하지 못했습니다."
+        }
+    }
+}
+
+private struct SteppingDateField: NSViewRepresentable {
+    @Binding var date: Date
+    let calendar: Calendar
+    let elements: NSDatePicker.ElementFlags
+    let format: String
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(date: $date)
+    }
+
+    func makeNSView(context: Context) -> NSDatePicker {
+        let picker = NSDatePicker()
+        picker.datePickerStyle = .textFieldAndStepper
+        picker.datePickerMode = .single
+        picker.datePickerElements = elements
+        picker.calendar = calendar
+        picker.locale = Locale(identifier: "ko_KR")
+        picker.timeZone = calendar.timeZone
+        picker.dateValue = date
+        picker.target = context.coordinator
+        picker.action = #selector(Coordinator.dateChanged(_:))
+
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.timeZone = calendar.timeZone
+        formatter.dateFormat = format
+        picker.formatter = formatter
+        return picker
+    }
+
+    func updateNSView(_ picker: NSDatePicker, context: Context) {
+        context.coordinator.date = $date
+        if picker.dateValue != date {
+            picker.dateValue = date
+        }
+    }
+
+    @MainActor
+    final class Coordinator: NSObject {
+        var date: Binding<Date>
+
+        init(date: Binding<Date>) {
+            self.date = date
+        }
+
+        @objc func dateChanged(_ picker: NSDatePicker) {
+            date.wrappedValue = picker.dateValue
         }
     }
 }
