@@ -43,7 +43,7 @@ The add and edit experiences use one compact popover containing:
 - Save button
 - Delete button in edit mode
 
-The form uses a 400-point width. Date and time both use 200-point AppKit field-and-stepper controls. The date formatter is fixed to `yyyy년 M월 d일`, and both controls keep their native up/down stepper buttons without truncating their values.
+The form uses a 400-point width. Date and time both use identical 200-by-28-point fields with native up/down steppers. The date text is generated directly as `yyyy년 M월 d일`; the date stepper changes one day and the time stepper changes one minute.
 
 The title is trimmed before saving. An empty title or a deadline that is not later than the current time is rejected with an inline error. A persistence error leaves the popover open and displays the store error.
 

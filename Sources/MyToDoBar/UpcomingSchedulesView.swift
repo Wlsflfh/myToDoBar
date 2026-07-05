@@ -1,6 +1,5 @@
 import MyToDoBarCore
 import MyToDoBarKit
-import AppKit
 import SwiftUI
 
 struct UpcomingSchedulesView: View {
@@ -162,13 +161,11 @@ private struct ScheduleFormView: View {
                 Text("날짜")
                     .frame(width: 38, alignment: .leading)
 
-                SteppingDateField(
-                    date: $deadline,
-                    calendar: calendar,
-                    elements: .yearMonthDay,
-                    format: "yyyy년 M월 d일"
+                SteppingValueField(
+                    value: ScheduleCalendar().koreanDateLabel(for: deadline, calendar: calendar),
+                    onIncrement: { adjustDate(by: 1) },
+                    onDecrement: { adjustDate(by: -1) }
                 )
-                .frame(width: 200, height: 24, alignment: .leading)
 
                 Spacer()
             }
@@ -177,13 +174,11 @@ private struct ScheduleFormView: View {
                 Text("시간")
                     .frame(width: 38, alignment: .leading)
 
-                SteppingDateField(
-                    date: $deadline,
-                    calendar: calendar,
-                    elements: .hourMinute,
-                    format: "a h:mm"
+                SteppingValueField(
+                    value: formattedTime,
+                    onIncrement: { adjustMinute(by: 1) },
+                    onDecrement: { adjustMinute(by: -1) }
                 )
-                .frame(width: 200, height: 24, alignment: .leading)
 
                 Spacer()
 
@@ -226,6 +221,25 @@ private struct ScheduleFormView: View {
         deadline = endOfDay
     }
 
+    private var formattedTime: String {
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.timeZone = calendar.timeZone
+        formatter.dateFormat = "a h:mm"
+        return formatter.string(from: deadline)
+    }
+
+    private func adjustDate(by value: Int) {
+        guard let adjusted = calendar.date(byAdding: .day, value: value, to: deadline) else { return }
+        deadline = adjusted
+    }
+
+    private func adjustMinute(by value: Int) {
+        guard let adjusted = calendar.date(byAdding: .minute, value: value, to: deadline) else { return }
+        deadline = adjusted
+    }
+
     private func saveSchedule() {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
@@ -261,54 +275,27 @@ private struct ScheduleFormView: View {
     }
 }
 
-private struct SteppingDateField: NSViewRepresentable {
-    @Binding var date: Date
-    let calendar: Calendar
-    let elements: NSDatePicker.ElementFlags
-    let format: String
+private struct SteppingValueField: View {
+    let value: String
+    let onIncrement: () -> Void
+    let onDecrement: () -> Void
 
-    func makeCoordinator() -> Coordinator {
-        Coordinator(date: $date)
-    }
+    var body: some View {
+        HStack(spacing: 6) {
+            Text(value)
+                .monospacedDigit()
+                .lineLimit(1)
 
-    func makeNSView(context: Context) -> NSDatePicker {
-        let picker = NSDatePicker()
-        picker.datePickerStyle = .textFieldAndStepper
-        picker.datePickerMode = .single
-        picker.datePickerElements = elements
-        picker.calendar = calendar
-        picker.locale = Locale(identifier: "ko_KR")
-        picker.timeZone = calendar.timeZone
-        picker.dateValue = date
-        picker.target = context.coordinator
-        picker.action = #selector(Coordinator.dateChanged(_:))
+            Spacer(minLength: 4)
 
-        let formatter = DateFormatter()
-        formatter.calendar = calendar
-        formatter.locale = Locale(identifier: "ko_KR")
-        formatter.timeZone = calendar.timeZone
-        formatter.dateFormat = format
-        picker.formatter = formatter
-        return picker
-    }
-
-    func updateNSView(_ picker: NSDatePicker, context: Context) {
-        context.coordinator.date = $date
-        if picker.dateValue != date {
-            picker.dateValue = date
+            Stepper("", onIncrement: onIncrement, onDecrement: onDecrement)
+                .labelsHidden()
+                .fixedSize()
         }
-    }
-
-    @MainActor
-    final class Coordinator: NSObject {
-        var date: Binding<Date>
-
-        init(date: Binding<Date>) {
-            self.date = date
-        }
-
-        @objc func dateChanged(_ picker: NSDatePicker) {
-            date.wrappedValue = picker.dateValue
-        }
+        .padding(.leading, 8)
+        .padding(.trailing, 4)
+        .frame(width: 200, height: 28)
+        .background(Color.secondary.opacity(0.12), in: RoundedRectangle(cornerRadius: 7))
+        .overlay(RoundedRectangle(cornerRadius: 7).stroke(Color.secondary.opacity(0.18)))
     }
 }

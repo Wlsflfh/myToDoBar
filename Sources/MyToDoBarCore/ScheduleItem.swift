@@ -36,4 +36,9 @@ public struct ScheduleCalendar: Sendable {
     public func endOfDay(for date: Date, calendar: Calendar) -> Date? {
         calendar.date(bySettingHour: 23, minute: 59, second: 0, of: date)
     }
+
+    public func koreanDateLabel(for date: Date, calendar: Calendar) -> String {
+        let components = calendar.dateComponents([.year, .month, .day], from: date)
+        return "\(components.year ?? 0)년 \(components.month ?? 0)월 \(components.day ?? 0)일"
+    }
 }

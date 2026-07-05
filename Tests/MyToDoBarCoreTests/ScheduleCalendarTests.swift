@@ -50,4 +50,14 @@ final class ScheduleCalendarTests: XCTestCase {
         XCTAssertEqual(components.minute, 59)
         XCTAssertEqual(components.second, 0)
     }
+
+    func testFormatsKoreanDateWithYearMonthAndDayUnits() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let date = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 7, day: 5)))
+
+        let label = ScheduleCalendar().koreanDateLabel(for: date, calendar: calendar)
+
+        XCTAssertEqual(label, "2026년 7월 5일")
+    }
 }
